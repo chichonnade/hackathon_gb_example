@@ -27,8 +27,10 @@ from visual_prompt.utils import display_image
 from vis_grasps import launch_visualizer, vis_grasps_meshcat
 from transform import transform_pcd_cam_to_rob
 
-# Path for the second robot arm URDF
-SECOND_ARM_URDF = "piper_description/urdf/piper_description_virtual_eef_second_arm.urdf"
+# Path for the additional robot arm URDFs
+SECOND_ARM_URDF = "piper_description/urdf/piper_description_virtual_eef_free_gripper.urdf"
+THIRD_ARM_URDF = "piper_description/urdf/piper_description_virtual_eef_free_gripper.urdf"
+FOURTH_ARM_URDF = "piper_description/urdf/piper_description_virtual_eef_free_gripper.urdf"
 
 # GPT-4o prompt
 USER_QUERY = "Identify the red cubes. If no red cubes are available then return an empty list."
@@ -89,13 +91,31 @@ def find_empty_spot(grounder, image, marker_data, cube_pixel_size):
 def main():
     # Initialize simulation environment, client, visualizer, and LLM grounder
     env = SimGrasp(urdf_path=URDF_PATH, frequency=FREQUENCY, objects=SIMULATION_OBJECTS)
-    # Load and initialize the second robot arm in the same simulation
-    second_arm_id = env.add_robot(
+    
+    # Add additional robot arms as objects
+    second_arm_id = env.add_object(
         urdf_path=SECOND_ARM_URDF,
-        base_position=[-0.3, 0.0, 0.025],    # adjust as needed
-        base_orientation=CUBE_ORIENTATION,  # or specify the arm's default orientation
-        scaling=1.0
+        pos=[-0.3, 0.0, 0.025],
+        orientation=CUBE_ORIENTATION,
+        globalScaling=1.0
     )
+    
+    # Add third robot arm
+    third_arm_id = env.add_object(
+        urdf_path=THIRD_ARM_URDF,
+        pos=[0.3, -0.3, 0.025],
+        orientation=CUBE_ORIENTATION,
+        globalScaling=1.0
+    )
+    
+    # Add fourth robot arm
+    fourth_arm_id = env.add_object(
+        urdf_path=FOURTH_ARM_URDF,
+        pos=[-0.3, -0.3, 0.025],
+        orientation=CUBE_ORIENTATION,
+        globalScaling=1.0
+    )
+    
     client = GeneralBionixClient(api_key=API_KEY)
     vis = launch_visualizer()
     grounder = VisualPrompterGrounding(CONFIG_PATH, debug=True)
@@ -161,10 +181,10 @@ def main():
 
         # Step 10: Execute grasp
         env.grasp(valid_angles[chosen_idx])
-        # Move the second arm to a demonstration pose
-        # Example joint configuration for the second arm
-        second_arm_joints = [0.0, -0.5, 1.0, 0.0, 0.5, -0.5]
-        env.move_robot(arm_id=second_arm_id, joint_angles=second_arm_joints)
+        
+        # We can't directly control the additional robot arms as they're just objects
+        # Added as static fixtures in the simulation environment
+        
         env.drop_object_in_tray()
 
         # Step 11: Place a cube in an empty spot
